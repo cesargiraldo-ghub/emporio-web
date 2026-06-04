@@ -27,7 +27,7 @@
     return o;
   }
   function priceHTML(p) {
-    var arr = /arriendo/i.test(p.negocio || "");
+    var arr = /arriendo|alquiler/i.test(p.negocio || "");
     var ven = /venta/i.test(p.negocio || "");
     var parts = [];
     if (arr && p.precioArriendo) parts.push(fmtCOP(p.precioArriendo) + ' <small>/mes</small>');
@@ -113,10 +113,17 @@
       if (pre.tipo) fType.value = pre.tipo;
       if (pre.q) fQ.value = pre.q;
 
+      function matchOp(neg, op) {
+        if (!op) return true;
+        var n = (neg || "").toLowerCase(), o = op.toLowerCase();
+        if (/arriendo|alquiler/.test(o)) return /arriendo|alquiler/.test(n);
+        if (/venta/.test(o)) return /venta/.test(n);
+        return n.indexOf(o) !== -1;
+      }
       function apply() {
         var op = fOp.value, ci = fCity.value, ty = fType.value, q = (fQ.value || "").toLowerCase().trim();
         return d.properties.filter(function (p) {
-          if (op && !(p.negocio || "").toLowerCase().includes(op.toLowerCase())) return false;
+          if (!matchOp(p.negocio, op)) return false;
           if (ci && p.ciudad !== ci) return false;
           if (ty && p.tipo !== ty) return false;
           if (q) {
