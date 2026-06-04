@@ -220,8 +220,9 @@
         p.estrato ? { v: p.estrato, l: "Estrato" } : null,
       ].filter(Boolean);
 
-      var mapEmbed = (p.lat && p.lng)
-        ? '<iframe loading="lazy" style="width:100%;height:260px;border:0;border-radius:var(--radius);margin-top:1.4rem" src="https://www.google.com/maps?q=' + p.lat + ',' + p.lng + '&z=15&output=embed"></iframe>'
+      var mapQ = (p.lat && p.lng) ? (p.lat + "," + p.lng) : (p.direccion || "");
+      var mapEmbed = mapQ
+        ? '<h3 style="margin:1.8rem 0 .7rem">Ubicación</h3><iframe loading="lazy" style="width:100%;height:300px;border:0;border-radius:var(--radius)" src="https://www.google.com/maps?q=' + encodeURIComponent(mapQ) + '&z=15&output=embed"></iframe>'
         : "";
 
       root.innerHTML =
@@ -233,11 +234,10 @@
                   (imgs.length > 1 ? '<button class="cnav prev" id="galPrev" aria-label="Anterior">‹</button><button class="cnav next" id="galNext" aria-label="Siguiente">›</button><span class="ccount" id="galCount">1 / ' + imgs.length + '</span>' : '') +
                 '</div>'
               : '<div class="gallery-main"><div class="noimg" style="display:grid;place-items:center;height:100%;color:var(--gris)">Sin fotos disponibles</div></div>') +
-            (imgs.length > 1 ? '<div class="gallery-thumbs" id="galThumbs">' + thumbs + '</div>' : '') +
             '<div style="margin-top:1.8rem">' +
               '<span class="eyebrow">' + esc([p.negocio, p.tipo].filter(Boolean).join(" · ")) + '</span>' +
               '<h1 style="font-size:clamp(1.8rem,4vw,2.6rem);margin:.4rem 0">' + esc(p.titulo) + '</h1>' +
-              '<div class="pcity" style="color:var(--gris)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg> ' + esc([p.direccion, p.barrio, p.ciudad].filter(Boolean).join(", ") || "Colombia") + '</div>' +
+              '<div class="pcity" style="color:var(--gris)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg> ' + esc(p.direccion || [p.barrio, p.ciudad].filter(Boolean).join(", ") || "Colombia") + '</div>' +
               '<div class="detail-price" style="margin-top:1rem">' + priceHTML(p) + '</div>' +
               (specs.length ? '<div class="spec-grid">' + specs.map(function (s) { return '<div class="spec glass"><div class="v">' + esc(s.v) + '</div><div class="l">' + esc(s.l) + '</div></div>'; }).join("") + '</div>' : '') +
               (p.descripcion ? '<h3 style="margin:1.6rem 0 .6rem">Descripción</h3><p style="color:var(--gris-soft);white-space:pre-line">' + esc(p.descripcion) + '</p>' : '') +

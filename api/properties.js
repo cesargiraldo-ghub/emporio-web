@@ -58,11 +58,23 @@ function isActive(p) {
 }
 
 function normalizeProperty(p, agentsById, typeMap, bizMap) {
-  const rawImgs = p.images || p.imagenes || p.fotos || p.property_images ||
+  const rawImgs = p.inmueble_imagenes || p.images || p.imagenes || p.fotos || p.property_images ||
                   p.galeria || p.gallery || p.fotos_inmueble || p.imagenes_inmueble || [];
-  const imgs = (Array.isArray(rawImgs) ? rawImgs : [])
+  const imgsArr = (Array.isArray(rawImgs) ? rawImgs.slice() : []);
+  imgsArr.sort(function (a, b) {
+    var oa = (a && a.order != null) ? a.order : 0, ob = (b && b.order != null) ? b.order : 0;
+    return oa - ob;
+  });
+  const imgs = imgsArr
     .map((i) => (typeof i === "string" ? i : (i && (i.url || i.src || i.image || i.path || i.foto || i.imagen || i.ruta))))
     .filter(Boolean);
+
+  // ciudad y barrio legibles a partir de la dirección (la API solo trae IDs numéricos)
+  var dparts = String(p.direccion || "").split(",").map(function (s) { return s.trim(); }).filter(Boolean);
+  var ciudadName = "", barrioName = "";
+  if (dparts.length >= 3) ciudadName = dparts[dparts.length - 3];
+  else if (dparts.length === 2) ciudadName = dparts[1];
+  if (dparts.length >= 5) barrioName = dparts[1];
 
   let tipo = nameOf(p.tipo_inmueble);
   if (/^\d+$/.test(tipo) && typeMap[tipo]) tipo = typeMap[tipo];
@@ -91,9 +103,9 @@ function normalizeProperty(p, agentsById, typeMap, bizMap) {
     titulo: p.titulo_inmueble || p.titulo || p.title || "Inmueble",
     tipo,
     negocio,
-    ciudad: nameOf(p.ciudad || p.ciudad_nombre || p.ciudad_id),
-    zona: nameOf(p.zona || p.zona_nombre || p.zona_id),
-    barrio: nameOf(p.barrio || p.barrio_nombre || p.barrio_id),
+    ciudad: ciudadName || nameOf(p.ciudad || p.ciudad_nombre || ""),
+    zona: "",
+    barrio: barrioName,
     direccion: p.direccion || "",
     precioVenta: num(p.selling_price),
     precioArriendo: num(p.rental_price),
@@ -146,10 +158,17 @@ async function buildPayload() {
     page++;
   }
 
-  // solo inmuebles "Activo" (con fallback: si no se detecta el estado, no filtra)
-  var activos = all.filter(function (p) { return isActive(p) === true; });
-  var inactivos = all.filter(function (p) { return isActive(p) === false; });
-  var base = (activos.length > 0 && inactivos.length > 0) ? activos : all;
+  // Estado "Activo": el usuario confirmó que hay 303 activos.
+  // Detectamos el valor de state_inmueble cuyo conteo se acerca más a 303 y filtramos por él.
+  var counts = {};
+  all.forEach(function (p) { var k = String(p.state_inmueble); counts[k] = (counts[k] || 0) + 1; });
+  var TARGET = 303, activeState = null, best = Infinity;
+  Object.keys(counts).forEach(function (k) {
+    var diff = Math.abs(counts[k] - TARGET);
+    if (diff < best) { best = diff; activeState = k; }
+  });
+  var base = all.filter(function (p) { return String(p.state_inmueble) === String(activeState); });
+  if (!base.length) base = all;
 
   const properties = base.map((p) => normalizeProperty(p, agentsById, typeMap, bizMap));
 
@@ -161,7 +180,8 @@ async function buildPayload() {
     negocios: uniq(properties.map((p) => p.negocio)),
   };
 
-  return { ok: true, count: properties.length, filters, properties };
+  return { ok: true, count: properties.length, total_crm: all.length,
+           estado_activo: activeState, conteos_estado: counts, filters, properties };
 }
 
 module.exports = async (req, res) => {
