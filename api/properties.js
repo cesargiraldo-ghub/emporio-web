@@ -41,6 +41,35 @@ function num(v) {
   return isNaN(n) ? null : n;
 }
 
+// --- filtrado y paginación del lado del servidor (para entregar 10 por página) ---
+function matchOp(neg, op) {
+  if (!op) return true;
+  var n = (neg || "").toLowerCase(), o = op.toLowerCase();
+  if (/arriendo|alquiler/.test(o)) return /arriendo|alquiler/.test(n);
+  if (/venta/.test(o)) return /venta/.test(n);
+  return n.indexOf(o) !== -1;
+}
+function applyFilters(list, f) {
+  var id = (f.id || "").trim();
+  if (id) {
+    // búsqueda por ID de CRM RED: tiene prioridad sobre los demás filtros
+    return list.filter(function (p) {
+      return String(p.id) === id || String(p.slug).replace(/^_/, "") === id;
+    });
+  }
+  var q = (f.q || "").toLowerCase().trim();
+  return list.filter(function (p) {
+    if (!matchOp(p.negocio, f.op)) return false;
+    if (f.tipo && p.tipo !== f.tipo) return false;
+    if (f.ciudad && String(p.ciudad || "").toLowerCase() !== String(f.ciudad).toLowerCase()) return false;
+    if (q) {
+      var hay = (p.titulo + " " + p.ciudad + " " + p.barrio + " " + p.zona + " " + p.direccion + " " + p.descripcion).toLowerCase();
+      if (hay.indexOf(q) === -1) return false;
+    }
+    return true;
+  });
+}
+
 // ¿el inmueble está "Activo"? Detección defensiva sobre varios posibles campos.
 function isActive(p) {
   var cands = [p.estado, p.status, p.state, p.estado_inmueble, p.estado_publicacion,
@@ -57,6 +86,51 @@ function isActive(p) {
   return null; // desconocido
 }
 
+// primer valor numérico válido entre varias posibles claves
+function pickNum(obj, keys) {
+  for (var i = 0; i < keys.length; i++) {
+    var v = obj[keys[i]];
+    if (v != null && v !== "") { var n = Number(v); if (!isNaN(n)) return n; }
+  }
+  return null;
+}
+// primer string no vacío entre varias posibles claves
+function pickStr(obj, keys) {
+  for (var i = 0; i < keys.length; i++) {
+    var v = obj[keys[i]];
+    if (v != null && String(v).trim() !== "") return String(v).trim();
+  }
+  return "";
+}
+// nombre legible de una característica (string u objeto)
+function featName(x) {
+  if (x == null) return "";
+  if (typeof x === "string") return x.trim();
+  if (typeof x === "object") {
+    return String(x.texto || x.nombre || x.name || x.titulo || x.label || x.descripcion ||
+      (x.caracteristica && (x.caracteristica.texto || x.caracteristica.nombre || x.caracteristica.name)) || "").trim();
+  }
+  return String(x).trim();
+}
+// características / amenidades como lista de nombres únicos
+function extractFeatures(p) {
+  var out = [], seen = {};
+  var srcs = [
+    p.caracteristicas_clasificacion, p.caracteristicas_estado_construcion, p.caracteristicas_orientacion,
+    p.caracteristicas_tarifas_adicionales_servicios_publico, p.caracteristicas_tipo_fachada,
+    p.caracteristicas_ubicacion, p.caracteristicas_internas, p.caracteristicas_externas,
+    p.caracteristicas, p.amenidades, p.amenities, p.features, p.property_features,
+    p.inmueble_caracteristicas, p.servicios, p.comodidades, p.atributos,
+  ];
+  srcs.forEach(function (s) {
+    if (Array.isArray(s)) s.forEach(function (it) {
+      var n = featName(it);
+      if (n && !seen[n.toLowerCase()]) { seen[n.toLowerCase()] = 1; out.push(n); }
+    });
+  });
+  return out;
+}
+
 function normalizeProperty(p, agentsById, typeMap, bizMap) {
   const rawImgs = p.inmueble_imagenes || p.images || p.imagenes || p.fotos || p.property_images ||
                   p.galeria || p.gallery || p.fotos_inmueble || p.imagenes_inmueble || [];
@@ -69,12 +143,25 @@ function normalizeProperty(p, agentsById, typeMap, bizMap) {
     .map((i) => (typeof i === "string" ? i : (i && (i.url || i.src || i.image || i.path || i.foto || i.imagen || i.ruta))))
     .filter(Boolean);
 
-  // ciudad y barrio legibles a partir de la dirección (la API solo trae IDs numéricos)
+  // ciudad / barrio / zona: ahora la API los trae como objetos {id, name}
   var dparts = String(p.direccion || "").split(",").map(function (s) { return s.trim(); }).filter(Boolean);
   var ciudadName = "", barrioName = "";
   if (dparts.length >= 3) ciudadName = dparts[dparts.length - 3];
   else if (dparts.length === 2) ciudadName = dparts[1];
   if (dparts.length >= 5) barrioName = dparts[1];
+  function objName(v) { var n = nameOf(v); return /^\d+$/.test(n) ? "" : n; }
+  var ciudadObj = objName(p.ciudad_id) || objName(p.ciudad) || ciudadName;
+  var barrioObj = objName(p.barrio_id) || objName(p.barrio) || barrioName;
+  var zonaObj = objName(p.zona_id) || objName(p.zona) || "";
+
+  // estrato puede venir como objeto {id, name:"estrato 2"} o como número
+  var estratoVal = null;
+  if (p.estrato != null) {
+    if (typeof p.estrato === "object") {
+      var m = String(p.estrato.name || p.estrato.nombre || "").match(/\d+/);
+      estratoVal = m ? Number(m[0]) : (p.estrato.id != null ? Number(p.estrato.id) : null);
+    } else { var en = Number(p.estrato); estratoVal = isNaN(en) ? null : en; }
+  }
 
   let tipo = nameOf(p.tipo_inmueble);
   if (/^\d+$/.test(tipo) && typeMap[tipo]) tipo = typeMap[tipo];
@@ -83,17 +170,25 @@ function normalizeProperty(p, agentsById, typeMap, bizMap) {
 
   const agentId =
     p.agent_id || p.created_by ||
+    (p.creator_agent && p.creator_agent.id) ||
     (p.agent && p.agent.id) || (p.agente && p.agente.id) || null;
-  let agent = p.agent || p.agente || (agentId && agentsById[agentId]) || null;
+  let agent = p.creator_agent || p.agent || p.agente || (agentId && agentsById[agentId]) || null;
   if (agent) {
+    var info = agent.userdata_info || agent.user || agent.usuario || agent; // datos suelen venir anidados
     agent = {
       id: agent.id,
-      nombre: [agent.primer_nombre || agent.nombre, agent.primer_apellido || agent.apellido]
+      nombre: [info.primer_nombre || agent.primer_nombre || agent.nombre,
+               info.primer_apellido || agent.primer_apellido || agent.apellido]
         .filter(Boolean).join(" ").trim() || "Asesor Emporio",
-      celular: agent.celular_movil || agent.main_cell_phone || agent.celular || "",
-      whatsapp: agent.celular_whatsapp || agent.whatsapp || agent.celular_movil || "",
-      email: agent.email || agent.main_mail || "",
-      foto: agent.foto || agent.avatar || agent.photo || "",
+      celular: pickStr(info, ["celular_movil", "main_cell_phone", "celular", "telefono", "phone"]) ||
+               pickStr(agent, ["celular_movil", "main_cell_phone", "celular", "telefono", "phone"]),
+      whatsapp: pickStr(info, ["celular_whatsapp", "whatsapp", "celular_movil"]) ||
+                pickStr(agent, ["celular_whatsapp", "whatsapp", "celular_movil"]),
+      email: pickStr(agent, ["email", "main_mail", "correo"]) || pickStr(info, ["email", "main_mail", "correo"]),
+      foto: pickStr(info, ["foto_persona", "foto", "avatar", "photo", "imagen", "image", "url_foto",
+                           "foto_url", "foto_perfil", "profile_photo", "profile_image", "picture",
+                           "avatar_url", "url_imagen", "imagen_url", "imagen_perfil"]) ||
+            pickStr(agent, ["foto_persona", "foto", "avatar", "photo", "imagen", "image", "url_foto"]),
     };
   }
 
@@ -103,19 +198,22 @@ function normalizeProperty(p, agentsById, typeMap, bizMap) {
     titulo: p.titulo_inmueble || p.titulo || p.title || "Inmueble",
     tipo,
     negocio,
-    ciudad: ciudadName || nameOf(p.ciudad || p.ciudad_nombre || ""),
-    zona: "",
-    barrio: barrioName,
+    ciudad: ciudadObj,
+    zona: zonaObj,
+    barrio: barrioObj,
     direccion: p.direccion || "",
     precioVenta: num(p.selling_price),
     precioArriendo: num(p.rental_price),
     habitaciones: num(p.habitaciones),
     banos: num(p.banos),
-    garaje: num(p.garaje != null ? p.garaje : (p.garajes != null ? p.garajes : (p.parqueadero != null ? p.parqueadero : p.parqueaderos))),
+    garaje: pickNum(p, ["garaje", "garajes", "parqueadero", "parqueaderos", "garage", "garages",
+                        "num_garajes", "numero_garajes", "n_garajes", "n_parqueaderos",
+                        "cantidad_garajes", "cantidad_parqueaderos", "parking"]),
     areaConstruida: num(p.area_contruida || p.area_construida),
     areaLote: num(p.area_lote),
-    estrato: num(p.estrato != null ? p.estrato : p.stratum),
+    estrato: estratoVal,
     descripcion: p.descripcion || p.description || p.descripcion_inmueble || "",
+    caracteristicas: extractFeatures(p),
     lat: num(p.latitud != null ? p.latitud : (p.lat != null ? p.lat : p.latitude)),
     lng: num(p.longitud != null ? p.longitud : (p.lng != null ? p.lng : p.longitude)),
     video: p.url_video || p.video || "",
@@ -191,19 +289,53 @@ module.exports = async (req, res) => {
       res.statusCode = 500;
       return res.end(JSON.stringify({ ok: false, error: "Faltan variables de entorno CRMRED_API_KEY / CRMRED_API_SECRET en Vercel." }));
     }
-    // ---- modo diagnóstico: /api/properties?raw=1 -> muestra 1 inmueble crudo + sus campos ----
+    // ---- modo diagnóstico: /api/properties?raw=1 -> 1 inmueble + 1 agente crudos + sus campos ----
     if (/[?&]raw=/.test(req.url || "")) {
       const r1 = await getJSON(`${BASE}/properties?per_page=2&page=1`);
       const block = r1.data && r1.data.data ? r1.data.data : (r1.data || []);
       const first = Array.isArray(block) ? block[0] : null;
+      let agentSample = null, agentKeys = [];
+      try {
+        const a = await getJSON(`${BASE}/agents`);
+        const ablock = a.data && a.data.data ? a.data.data : (a.data || []);
+        agentSample = Array.isArray(ablock) ? ablock[0] : null;
+        agentKeys = agentSample ? Object.keys(agentSample) : [];
+      } catch (e) {}
       return res.end(JSON.stringify({
         total: r1.data && r1.data.total,
         last_page: r1.data && r1.data.last_page,
-        keys: first ? Object.keys(first) : [],
+        property_keys: first ? Object.keys(first) : [],
         primer_inmueble: first,
+        agent_keys: agentKeys,
+        primer_agente: agentSample,
       }, null, 2));
     }
     const now = Date.now();
+    // ---- modo paginado: /api/properties?page=N&per_page=10[&op=&tipo=&q=&ciudad=] ----
+    // Entrega solo la página solicitada (no todo el inventario) para que el cliente cargue rápido.
+    var q = {};
+    (String(req.url || "").split("?")[1] || "").split("&").forEach(function (kv) {
+      if (!kv) return; var p = kv.split("="); q[decodeURIComponent(p[0])] = decodeURIComponent((p[1] || "").replace(/\+/g, " "));
+    });
+    if (q.page != null || q.per_page != null) {
+      if (!(CACHE.data && now - CACHE.at < TTL)) { CACHE = { at: now, data: await buildPayload() }; }
+      const d = CACHE.data;
+      const perPage = Math.min(Math.max(parseInt(q.per_page, 10) || 10, 1), 48);
+      const filtered = applyFilters(d.properties, { id: q.id || "", op: q.op || "", tipo: q.tipo || "", q: q.q || "", ciudad: q.ciudad || "" });
+      const total = filtered.length;
+      const lastPage = Math.max(1, Math.ceil(total / perPage));
+      let page = parseInt(q.page, 10) || 1;
+      if (page < 1) page = 1; if (page > lastPage) page = lastPage;
+      const slice = filtered.slice((page - 1) * perPage, page * perPage);
+      res.setHeader("X-Cache", "PAGE");
+      res.setHeader("Cache-Control", "public, max-age=120");
+      return res.end(JSON.stringify({
+        ok: true, total: total, count: slice.length,
+        current_page: page, last_page: lastPage, per_page: perPage,
+        filters: d.filters, properties: slice,
+      }));
+    }
+
     if (CACHE.data && now - CACHE.at < TTL) {
       res.setHeader("X-Cache", "HIT");
       return res.end(JSON.stringify(CACHE.data));

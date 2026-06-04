@@ -115,78 +115,70 @@
     }).catch(function () { el.innerHTML = '<p class="empty">No se pudieron cargar los inmuebles en este momento.</p>'; });
   }
 
-  /* ============ CATÁLOGO ============ */
+  /* ============ CATÁLOGO (paginado en servidor, 10 x página) ============ */
   function initCatalog() {
     var grid = document.getElementById("catGrid");
     var count = document.getElementById("catCount");
     var pager = document.getElementById("catPager");
     var fOp = document.getElementById("cfOp"), fType = document.getElementById("cfType"),
-        fQ = document.getElementById("cfQ");
+        fQ = document.getElementById("cfQ"), fId = document.getElementById("cfId");
     var pre = qp();
-    var state = { page: 1 };
+    var PER = 12;
+    var selectsReady = false, tdeb = null;
+    var filters = { id: pre.id || "", op: pre.op || "", tipo: pre.tipo || "", q: pre.q || pre.ciudad || "" };
 
-    grid.innerHTML = '<div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div>';
-
-    load().then(function (d) {
-      if (!d.ok) { grid.innerHTML = '<p class="empty">' + esc(d.error || "Error al cargar inmuebles.") + '</p>'; count.textContent = ""; return; }
-      // poblar selects
-      function fill(sel, vals, label) {
-        sel.innerHTML = '<option value="">' + label + '</option>' + vals.map(function (v) { return '<option>' + esc(v) + '</option>'; }).join("");
-      }
-      fill(fOp, d.filters.negocios, "Cualquier operación");
-      fill(fType, d.filters.tipos, "Todos los tipos");
-      // presets desde URL
-      if (pre.op) fOp.value = pre.op;
-      if (pre.tipo) fType.value = pre.tipo;
-      if (pre.q) fQ.value = pre.q;
-      else if (pre.ciudad) fQ.value = pre.ciudad;
-
-      function matchOp(neg, op) {
-        if (!op) return true;
-        var n = (neg || "").toLowerCase(), o = op.toLowerCase();
-        if (/arriendo|alquiler/.test(o)) return /arriendo|alquiler/.test(n);
-        if (/venta/.test(o)) return /venta/.test(n);
-        return n.indexOf(o) !== -1;
-      }
-      function apply() {
-        var op = fOp.value, ty = fType.value, q = (fQ.value || "").toLowerCase().trim();
-        return d.properties.filter(function (p) {
-          if (!matchOp(p.negocio, op)) return false;
-          if (ty && p.tipo !== ty) return false;
-          if (q) {
-            var hay = (p.titulo + " " + p.ciudad + " " + p.barrio + " " + p.zona + " " + p.direccion + " " + p.descripcion).toLowerCase();
-            if (!hay.includes(q)) return false;
-          }
-          return true;
-        });
-      }
-      function render() {
-        var res = apply();
-        count.textContent = res.length + (res.length === 1 ? " inmueble encontrado" : " inmuebles encontrados");
-        var pages = Math.max(1, Math.ceil(res.length / PER_PAGE));
-        if (state.page > pages) state.page = 1;
-        var slice = res.slice((state.page - 1) * PER_PAGE, state.page * PER_PAGE);
-        grid.innerHTML = slice.length ? slice.map(cardHTML).join("") : '<p class="empty">No hay inmuebles que coincidan con tu búsqueda. Prueba con otros filtros.</p>';
-        // pager
-        if (pages <= 1) { pager.innerHTML = ""; }
-        else {
-          var html = '<button ' + (state.page === 1 ? "disabled" : "") + ' data-p="' + (state.page - 1) + '">‹</button>';
-          for (var i = 1; i <= pages; i++) html += '<button class="' + (i === state.page ? "active" : "") + '" data-p="' + i + '">' + i + '</button>';
-          html += '<button ' + (state.page === pages ? "disabled" : "") + ' data-p="' + (state.page + 1) + '">›</button>';
-          pager.innerHTML = html;
+    function skeleton() {
+      grid.innerHTML = '<div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div>';
+    }
+    function pagerHTML(cur, last) {
+      if (last <= 1) return "";
+      var h = '<button ' + (cur === 1 ? "disabled" : "") + ' data-p="' + (cur - 1) + '">‹</button>';
+      var pages = [1];
+      for (var i = cur - 1; i <= cur + 1; i++) if (i > 1 && i < last) pages.push(i);
+      pages.push(last);
+      pages = pages.filter(function (v, i, a) { return a.indexOf(v) === i; }).sort(function (a, b) { return a - b; });
+      var prev = 0;
+      pages.forEach(function (n) {
+        if (n - prev > 1) h += '<span style="padding:0 .4rem;color:var(--gris)">…</span>';
+        h += '<button class="' + (n === cur ? "active" : "") + '" data-p="' + n + '">' + n + '</button>';
+        prev = n;
+      });
+      h += '<button ' + (cur === last ? "disabled" : "") + ' data-p="' + (cur + 1) + '">›</button>';
+      return h;
+    }
+    function fetchPage(page) {
+      skeleton();
+      var url = "/api/properties?page=" + page + "&per_page=" + PER +
+        (filters.id ? "&id=" + encodeURIComponent(filters.id) : "") +
+        (filters.op ? "&op=" + encodeURIComponent(filters.op) : "") +
+        (filters.tipo ? "&tipo=" + encodeURIComponent(filters.tipo) : "") +
+        (filters.q ? "&q=" + encodeURIComponent(filters.q) : "");
+      fetch(url).then(function (r) { return r.json(); }).then(function (d) {
+        if (!d.ok) { grid.innerHTML = '<p class="empty">' + esc(d.error || "Error al cargar inmuebles.") + '</p>'; count.textContent = ""; pager.innerHTML = ""; return; }
+        if (!selectsReady && d.filters) {
+          fOp.innerHTML = '<option value="">Cualquier operación</option>' + d.filters.negocios.map(function (v) { return '<option>' + esc(v) + '</option>'; }).join("");
+          fType.innerHTML = '<option value="">Todos los tipos</option>' + d.filters.tipos.map(function (v) { return '<option>' + esc(v) + '</option>'; }).join("");
+          fOp.value = filters.op; fType.value = filters.tipo; fQ.value = filters.q; fId.value = filters.id;
+          selectsReady = true;
         }
+        count.textContent = d.total + (d.total === 1 ? " inmueble encontrado" : " inmuebles encontrados");
+        grid.innerHTML = d.properties.length ? d.properties.map(cardHTML).join("") : '<p class="empty">No hay inmuebles que coincidan con tu búsqueda. Prueba con otros filtros.</p>';
+        pager.innerHTML = pagerHTML(d.current_page, d.last_page);
         document.querySelectorAll(".reveal").forEach(function (e) { e.classList.add("in"); });
         lazyImages(grid);
-      }
-      [fOp, fType].forEach(function (s) { s.addEventListener("change", function () { state.page = 1; render(); }); });
-      fQ.addEventListener("input", function () { state.page = 1; render(); });
-      pager.addEventListener("click", function (e) {
-        var b = e.target.closest("button[data-p]"); if (!b) return;
-        state.page = parseInt(b.getAttribute("data-p"), 10); render();
-        window.scrollTo({ top: grid.offsetTop - 120, behavior: "smooth" });
-      });
-      render();
-    }).catch(function () { grid.innerHTML = '<p class="empty">No se pudieron cargar los inmuebles.</p>'; });
+      }).catch(function () { grid.innerHTML = '<p class="empty">No se pudieron cargar los inmuebles.</p>'; count.textContent = ""; });
+    }
+
+    [fOp, fType].forEach(function (s) { s.addEventListener("change", function () { filters.op = fOp.value; filters.tipo = fType.value; fetchPage(1); }); });
+    fQ.addEventListener("input", function () { clearTimeout(tdeb); tdeb = setTimeout(function () { filters.q = fQ.value; fetchPage(1); }, 350); });
+    fId.addEventListener("input", function () { clearTimeout(tdeb); tdeb = setTimeout(function () { filters.id = fId.value.trim(); fetchPage(1); }, 350); });
+    pager.addEventListener("click", function (e) {
+      var b = e.target.closest("button[data-p]"); if (!b || b.disabled) return;
+      fetchPage(parseInt(b.getAttribute("data-p"), 10));
+      window.scrollTo({ top: grid.offsetTop - 120, behavior: "smooth" });
+    });
+
+    fetchPage(1);
   }
 
   /* ============ FICHA / DETALLE ============ */
@@ -224,6 +216,10 @@
       var mapEmbed = mapQ
         ? '<h3 style="margin:1.8rem 0 .7rem">Ubicación</h3><iframe loading="lazy" style="width:100%;height:300px;border:0;border-radius:var(--radius)" src="https://www.google.com/maps?q=' + encodeURIComponent(mapQ) + '&z=15&output=embed"></iframe>'
         : "";
+      var featuresHTML = (p.caracteristicas && p.caracteristicas.length)
+        ? '<h3 style="margin:1.6rem 0 .6rem">Características</h3><div class="feat-list">' +
+          p.caracteristicas.map(function (f) { return '<span class="feat">' + esc(f) + '</span>'; }).join("") + '</div>'
+        : "";
 
       root.innerHTML =
         '<nav style="font-size:.85rem;color:var(--gris);margin-bottom:1.2rem"><a href="index.html" style="color:var(--gris)">Inicio</a> / <a href="inmuebles.html" style="color:var(--gris)">Inmuebles</a> / <span style="color:#fff">' + esc(p.titulo) + '</span></nav>' +
@@ -241,6 +237,7 @@
               '<div class="detail-price" style="margin-top:1rem">' + priceHTML(p) + '</div>' +
               (specs.length ? '<div class="spec-grid">' + specs.map(function (s) { return '<div class="spec glass"><div class="v">' + esc(s.v) + '</div><div class="l">' + esc(s.l) + '</div></div>'; }).join("") + '</div>' : '') +
               (p.descripcion ? '<h3 style="margin:1.6rem 0 .6rem">Descripción</h3><p style="color:var(--gris-soft);white-space:pre-line">' + esc(p.descripcion) + '</p>' : '') +
+              featuresHTML +
               (p.video ? '<div class="video-wrap" style="margin-top:1.4rem"><iframe src="' + esc(toEmbed(p.video)) + '" loading="lazy" allowfullscreen></iframe></div>' : '') +
               mapEmbed +
             '</div>' +
