@@ -53,8 +53,8 @@
     var im = img0(p);
     return '' +
       '<a class="pcard glass reveal" href="inmueble.html?slug=' + encodeURIComponent(p.slug) + '" data-track="VerPropiedades" data-track-label="ficha">' +
-        '<div class="ph">' +
-          (im ? '<img loading="lazy" src="' + esc(im) + '" alt="' + esc(p.titulo) + '">' : '<div class="noimg">Sin foto</div>') +
+        '<div class="ph" data-pid="' + p.id + '">' +
+          (im ? '<img loading="lazy" src="' + esc(im) + '" alt="' + esc(p.titulo) + '">' : '') +
           (p.negocio ? '<span class="pbadge">' + esc(p.negocio) + '</span>' : '') +
           (p.tipo ? '<span class="pbadge alt">' + esc(p.tipo) + '</span>' : '') +
         '</div>' +
@@ -75,14 +75,43 @@
     });
   }
 
+  /* ---------- imágenes bajo demanda (/api/images) ---------- */
+  var imgCache = {};
+  function fetchImages(id) {
+    if (imgCache[id]) return Promise.resolve(imgCache[id]);
+    return fetch("/api/images?id=" + id).then(function (r) { return r.json(); })
+      .then(function (d) { var u = (d && d.images) || []; imgCache[id] = u; return u; })
+      .catch(function () { imgCache[id] = []; return []; });
+  }
+  function fillPh(ph) {
+    if (ph.dataset.done || ph.querySelector("img")) return;
+    ph.dataset.done = "1";
+    fetchImages(ph.getAttribute("data-pid")).then(function (urls) {
+      if (urls && urls[0]) {
+        var im = new Image(); im.loading = "lazy"; im.src = urls[0]; im.alt = "";
+        ph.insertBefore(im, ph.firstChild);
+      } else {
+        var d = document.createElement("div"); d.className = "noimg"; d.textContent = "Sin foto"; ph.appendChild(d);
+      }
+    });
+  }
+  function lazyImages(container) {
+    var phs = container.querySelectorAll(".ph[data-pid]");
+    if (!("IntersectionObserver" in window)) { phs.forEach(fillPh); return; }
+    var io = new IntersectionObserver(function (ents) {
+      ents.forEach(function (en) { if (en.isIntersecting) { io.unobserve(en.target); fillPh(en.target); } });
+    }, { rootMargin: "300px" });
+    phs.forEach(function (ph) { if (!ph.querySelector("img")) io.observe(ph); });
+  }
+
   /* ============ DESTACADOS (home) ============ */
   function initFeatured(el) {
     el.innerHTML = '<div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div>';
     load().then(function (d) {
       if (!d.ok || !d.properties || !d.properties.length) { el.innerHTML = '<p class="empty">Pronto verás aquí nuestros inmuebles destacados.</p>'; return; }
-      var list = d.properties.filter(function (p) { return img0(p); });
-      if (!list.length) list = d.properties;
-      el.innerHTML = list.slice(0, 6).map(cardHTML).join("");
+      var list = d.properties.slice(0, 6);
+      el.innerHTML = list.map(cardHTML).join("");
+      lazyImages(el);
     }).catch(function () { el.innerHTML = '<p class="empty">No se pudieron cargar los inmuebles en este momento.</p>'; });
   }
 
@@ -149,6 +178,7 @@
           pager.innerHTML = html;
         }
         document.querySelectorAll(".reveal").forEach(function (e) { e.classList.add("in"); });
+        lazyImages(grid);
       }
       [fOp, fCity, fType].forEach(function (s) { s.addEventListener("change", function () { state.page = 1; render(); }); });
       fQ.addEventListener("input", function () { state.page = 1; render(); });
@@ -173,7 +203,8 @@
       if (!p) { root.innerHTML = '<p class="empty">Inmueble no encontrado. <a href="inmuebles.html" style="color:var(--rojo-soft)">Ver catálogo</a></p>'; return; }
       document.title = p.titulo + " | Emporio Bienes y Capitales";
 
-      var imgs = p.imagenes && p.imagenes.length ? p.imagenes : [];
+      var imgsReady = (p.imagenes && p.imagenes.length) ? Promise.resolve(p.imagenes) : fetchImages(p.id);
+      imgsReady.then(function (imgs) {
       var mainImg = imgs.length ? imgs[0] : "";
       var thumbs = imgs.map(function (u, i) { return '<img class="' + (i === 0 ? "active" : "") + '" data-i="' + i + '" src="' + esc(u) + '" alt="foto ' + (i + 1) + '">'; }).join("");
 
@@ -259,6 +290,7 @@
           })
           .catch(function () { btn.disabled = false; btn.textContent = "Solicitar información"; alert("Error de conexión. Intenta de nuevo."); });
       });
+      }); // fin imgsReady
     }).catch(function () { root.innerHTML = '<p class="empty">No se pudo cargar el inmueble.</p>'; });
   }
 

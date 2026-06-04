@@ -41,9 +41,27 @@ function num(v) {
   return isNaN(n) ? null : n;
 }
 
+// ¿el inmueble está "Activo"? Detección defensiva sobre varios posibles campos.
+function isActive(p) {
+  var cands = [p.estado, p.status, p.state, p.estado_inmueble, p.estado_publicacion,
+               p.activo, p.is_active, p.active, p.publicado, p.estado_nombre,
+               (p.estado && (p.estado.nombre || p.estado.name))];
+  for (var i = 0; i < cands.length; i++) {
+    var c = cands[i];
+    if (c == null) continue;
+    var s = String(c).toLowerCase().trim();
+    if (["activo", "active", "1", "true", "publicado", "disponible"].indexOf(s) !== -1) return true;
+    if (["inactivo", "inactive", "0", "false", "vendido", "arrendado", "alquilado",
+         "retirado", "pausado", "suspendido", "inhabilitado"].indexOf(s) !== -1) return false;
+  }
+  return null; // desconocido
+}
+
 function normalizeProperty(p, agentsById, typeMap, bizMap) {
-  const imgs = (p.images || p.imagenes || p.fotos || [])
-    .map((i) => (typeof i === "string" ? i : i.url || i.src || i.image))
+  const rawImgs = p.images || p.imagenes || p.fotos || p.property_images ||
+                  p.galeria || p.gallery || p.fotos_inmueble || p.imagenes_inmueble || [];
+  const imgs = (Array.isArray(rawImgs) ? rawImgs : [])
+    .map((i) => (typeof i === "string" ? i : (i && (i.url || i.src || i.image || i.path || i.foto || i.imagen || i.ruta))))
     .filter(Boolean);
 
   let tipo = nameOf(p.tipo_inmueble);
@@ -128,7 +146,12 @@ async function buildPayload() {
     page++;
   }
 
-  const properties = all.map((p) => normalizeProperty(p, agentsById, typeMap, bizMap));
+  // solo inmuebles "Activo" (con fallback: si no se detecta el estado, no filtra)
+  var activos = all.filter(function (p) { return isActive(p) === true; });
+  var inactivos = all.filter(function (p) { return isActive(p) === false; });
+  var base = (activos.length > 0 && inactivos.length > 0) ? activos : all;
+
+  const properties = base.map((p) => normalizeProperty(p, agentsById, typeMap, bizMap));
 
   // opciones de filtro derivadas de los datos reales
   const uniq = (arr) => [...new Set(arr.filter((x) => x && !/^\d+$/.test(String(x))))].sort();
@@ -147,6 +170,18 @@ module.exports = async (req, res) => {
     if (!process.env.CRMRED_API_KEY || !process.env.CRMRED_API_SECRET) {
       res.statusCode = 500;
       return res.end(JSON.stringify({ ok: false, error: "Faltan variables de entorno CRMRED_API_KEY / CRMRED_API_SECRET en Vercel." }));
+    }
+    // ---- modo diagnóstico: /api/properties?raw=1 -> muestra 1 inmueble crudo + sus campos ----
+    if (/[?&]raw=/.test(req.url || "")) {
+      const r1 = await getJSON(`${BASE}/properties?per_page=2&page=1`);
+      const block = r1.data && r1.data.data ? r1.data.data : (r1.data || []);
+      const first = Array.isArray(block) ? block[0] : null;
+      return res.end(JSON.stringify({
+        total: r1.data && r1.data.total,
+        last_page: r1.data && r1.data.last_page,
+        keys: first ? Object.keys(first) : [],
+        primer_inmueble: first,
+      }, null, 2));
     }
     const now = Date.now();
     if (CACHE.data && now - CACHE.at < TTL) {
