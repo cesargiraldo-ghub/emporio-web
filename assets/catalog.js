@@ -249,17 +249,7 @@
             '<div class="advisor glass">' +
               '<div class="who"><div class="avatar">' + (ag.foto ? '<img src="' + esc(ag.foto) + '">' : esc(initials)) + '</div>' +
                 '<div><div class="nm">' + esc(ag.nombre) + '</div><div class="rl">Asesor del inmueble</div></div></div>' +
-              (waNum ? '<a href="https://wa.me/' + waNum + '?text=' + encodeURIComponent("Hola, me interesa el inmueble: " + p.titulo) + '" target="_blank" class="btn btn-rojo" style="width:100%;margin-bottom:.6rem" data-track="SolicitudSoporte">WhatsApp</a>' : '') +
-              '<h3 style="font-family:var(--ff-body);font-size:1.05rem;margin:.6rem 0 .9rem">Agenda una visita</h3>' +
-              '<form id="visitaForm">' +
-                '<div class="input-group full"><input type="text" name="nombre" placeholder="Nombre" required></div>' +
-                '<div class="input-group full"><input type="email" name="email" placeholder="Correo" required></div>' +
-                '<div class="input-group full"><input type="tel" name="telefono" placeholder="Teléfono / WhatsApp" required></div>' +
-                '<div class="input-group full"><input type="date" name="fecha"></div>' +
-                '<div class="input-group full"><textarea name="mensaje" placeholder="Mensaje (opcional)" style="min-height:80px"></textarea></div>' +
-                '<button type="submit" class="btn btn-rojo" style="width:100%">Solicitar información</button>' +
-              '</form>' +
-              '<div id="leadOk" style="display:none;text-align:center;padding:.8rem"><strong>¡Gracias!</strong><br>Un asesor te contactará pronto.</div>' +
+              '<a href="https://wa.me/573145590000?text=' + encodeURIComponent("Hola, me interesa el inmueble: " + p.titulo + " (ID CRM RED: " + p.id + ")") + '" target="_blank" class="btn btn-rojo" style="width:100%" data-track="SolicitudSoporte">WhatsApp</a>' +
             '</div>' +
           '</div>' +
         '</div>';
@@ -284,25 +274,6 @@
         show(parseInt(t.getAttribute("data-i"), 10));
       });
 
-      // formulario lead -> /api/lead
-      var form = document.getElementById("visitaForm");
-      form.addEventListener("submit", function (e) {
-        e.preventDefault();
-        var btn = form.querySelector("button"); btn.disabled = true; btn.textContent = "Enviando...";
-        var body = {
-          nombre: form.nombre.value, email: form.email.value, telefono: form.telefono.value,
-          whatsapp: form.telefono.value, fecha: form.fecha.value, mensaje: form.mensaje.value,
-          interes: "Información/visita de inmueble", property: p.id, propiedadTitulo: p.titulo
-        };
-        if (window.EMP) window.EMP.lead({ inmueble: p.titulo, ciudad: p.ciudad });
-        fetch("/api/lead", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) })
-          .then(function (r) { return r.json(); })
-          .then(function (res) {
-            if (res.ok) { form.style.display = "none"; document.getElementById("leadOk").style.display = "block"; }
-            else { btn.disabled = false; btn.textContent = "Solicitar información"; alert("No se pudo enviar: " + (res.error || "intenta de nuevo")); }
-          })
-          .catch(function () { btn.disabled = false; btn.textContent = "Solicitar información"; alert("Error de conexión. Intenta de nuevo."); });
-      });
       }); // fin imgsReady
     }).catch(function () { root.innerHTML = '<p class="empty">No se pudo cargar el inmueble.</p>'; });
   }
@@ -312,10 +283,61 @@
     return m ? "https://www.youtube.com/embed/" + m[1] : url;
   }
 
+  /* ============ CARRUSEL "ÚLTIMOS LISTADOS" (home) ============ */
+  function initHero(el) {
+    load().then(function (d) {
+      if (!d.ok || !d.properties || !d.properties.length) return;
+      var list = d.properties.slice().sort(function (a, b) {
+        return String(b.createdAt || "").localeCompare(String(a.createdAt || ""));
+      });
+      var withImg = list.filter(function (p) { return img0(p); });
+      list = (withImg.length >= 5 ? withImg : list).slice(0, 10);
+      if (!list.length) return;
+      var cur = 0, timer = null;
+
+      function metaInline(p) {
+        return [p.habitaciones ? "<span>" + p.habitaciones + " hab</span>" : "",
+                p.banos ? "<span>" + p.banos + " baños</span>" : "",
+                p.areaConstruida ? "<span>" + p.areaConstruida + " m²</span>" : ""]
+               .filter(Boolean).join("·");
+      }
+      function render() {
+        var p = list[cur], im = img0(p);
+        var dots = list.map(function (_, i) { return '<button data-d="' + i + '" class="' + (i === cur ? "active" : "") + '" aria-label="Inmueble ' + (i + 1) + '"></button>'; }).join("");
+        el.innerHTML =
+          '<span class="tag">Últimos listados</span>' +
+          '<div class="prop-img"' + (im ? ' style="background-image:url(' + esc(im) + ')"' : '') + '>' +
+            '<button class="hcar-prev" aria-label="Anterior">‹</button>' +
+            '<button class="hcar-next" aria-label="Siguiente">›</button>' +
+            '<span class="price">' + priceHTML(p) + '</span>' +
+          '</div>' +
+          '<h3 style="font-size:1.2rem;margin-top:.2rem">' + esc(p.titulo) + '</h3>' +
+          '<div class="meta">' + metaInline(p) + '</div>' +
+          '<a href="inmueble.html?slug=' + encodeURIComponent(p.slug) + '" class="btn btn-ghost" style="margin-top:1rem;width:100%" data-track="VerPropiedades" data-track-label="hero">Ver detalle</a>' +
+          '<div class="hcar-dots">' + dots + '</div>';
+      }
+      function go(i) { cur = (i + list.length) % list.length; render(); }
+      function auto() { clearInterval(timer); timer = setInterval(function () { go(cur + 1); }, 5000); }
+
+      el.addEventListener("click", function (e) {
+        var t = e.target.closest(".hcar-prev,.hcar-next,[data-d]"); if (!t) return;
+        if (t.classList.contains("hcar-prev")) go(cur - 1);
+        else if (t.classList.contains("hcar-next")) go(cur + 1);
+        else if (t.hasAttribute("data-d")) go(parseInt(t.getAttribute("data-d"), 10));
+        auto();
+      });
+      el.addEventListener("mouseenter", function () { clearInterval(timer); });
+      el.addEventListener("mouseleave", auto);
+      render(); auto();
+    });
+  }
+
   /* ---------- bootstrap ---------- */
   document.addEventListener("DOMContentLoaded", function () {
     var feat = document.getElementById("featuredGrid");
     if (feat) initFeatured(feat);
+    var hero = document.getElementById("heroCarousel");
+    if (hero) initHero(hero);
     if (document.getElementById("catGrid")) initCatalog();
     if (document.getElementById("propDetail")) initDetail();
   });

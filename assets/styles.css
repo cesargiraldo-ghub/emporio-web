@@ -148,7 +148,7 @@ header.nav {
   box-shadow: var(--glass-shadow);
 }
 .nav-logo { display: flex; align-items: center; gap: 0.6rem; }
-.nav-logo img { height: 52px; width: auto; display: block; }
+.nav-logo img { height: 64px; width: auto; display: block; }
 .nav-logo .word { font-family: var(--ff-display); font-weight: 700; font-size: 1.05rem; letter-spacing: 0.02em; }
 .nav-links { display: flex; align-items: center; gap: 0.3rem; list-style: none; }
 .nav-links a {
@@ -232,7 +232,7 @@ header.nav {
 /* --- Video / testimonios --- */
 .video-wrap { position: relative; border-radius: var(--radius); overflow: hidden; aspect-ratio: 16/9; border: 1px solid var(--glass-border); box-shadow: var(--glass-shadow); }
 .video-wrap iframe { width: 100%; height: 100%; border: 0; display: block; }
-.testi-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 1.4rem; }
+.testi-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 1.2rem; max-width: 720px; margin-left: auto; margin-right: auto; }
 .testi-card { padding: 0.8rem; }
 .testi-card .video-wrap { aspect-ratio: 9/16; margin-bottom: 0.9rem; }
 .testi-card .who { display: flex; align-items: center; gap: 0.7rem; padding: 0 0.6rem 0.6rem; }
@@ -272,7 +272,10 @@ header.nav {
 
 /* --- Equipo --- */
 .team-card { padding: 1.4rem; text-align: center; }
-.team-card .ph { width: 92px; height: 92px; border-radius: 50%; margin: 0 auto 1rem; background: linear-gradient(135deg,#2a2a30,#14141a); border: 2px solid var(--rojo); display:grid; place-items:center; font-family: var(--ff-display); font-size:1.8rem; }
+.team-card .ph { width: 92px; height: 92px; border-radius: 50%; margin: 0 auto 1rem; background: linear-gradient(135deg,#2a2a30,#14141a); border: 2px solid var(--rojo); display:grid; place-items:center; font-family: var(--ff-display); font-size:1.8rem; overflow: hidden; }
+.team-card .ph img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
+.team-grid { display: flex; flex-wrap: wrap; justify-content: center; gap: 1.4rem; }
+.team-grid .team-card { flex: 0 1 210px; }
 .team-card h4 { font-size: 1.15rem; }
 .team-card .role { color: var(--rojo-soft); font-size: 0.85rem; font-weight: 500; margin: 0.2rem 0 0.6rem; }
 .team-card p { font-size: 0.85rem; }
@@ -484,3 +487,24 @@ footer.site-footer { padding: 4rem 0 2rem; border-top: 1px solid var(--glass-bor
 .ccount { position: absolute; bottom: 14px; right: 14px; background: rgba(0,0,0,0.55); backdrop-filter: blur(6px); color: #fff; font-size: 0.8rem; padding: 0.3rem 0.7rem; border-radius: 100px; z-index: 2; }
 .cat-toolbar { grid-template-columns: 1.8fr 1fr 1fr; }
 @media (max-width: 900px) { .cat-toolbar { grid-template-columns: 1fr 1fr; } }
+
+/* ---- Stats hero centradas + reseña Google ---- */
+.hero-badge { text-align: center; }
+.hero-badge .num { display: flex; align-items: center; justify-content: center; gap: 0.35rem; }
+.hero-badge .stars { color: #fbbc04; font-size: 0.9rem; letter-spacing: 1px; margin-top: 0.15rem; }
+.btn-mini { padding: 0.4rem 0.95rem; font-size: 0.78rem; margin-top: 0.55rem; }
+.gicon { width: 22px; height: 22px; }
+
+/* ---- Carrusel "Últimos listados" en el hero ---- */
+.hero-card .prop-img { background-size: cover; background-position: center; }
+.hero-card .prop-img .hcar-prev, .hero-card .prop-img .hcar-next {
+  position: absolute; top: 50%; transform: translateY(-50%); z-index: 3;
+  width: 38px; height: 38px; border-radius: 50%; background: rgba(0,0,0,0.5);
+  backdrop-filter: blur(6px); border: 1px solid var(--glass-border); color: #fff;
+  cursor: pointer; display: grid; place-items: center; font-size: 1.4rem; line-height: 1; transition: background .25s;
+}
+.hero-card .prop-img .hcar-prev:hover, .hero-card .prop-img .hcar-next:hover { background: var(--rojo); }
+.hero-card .prop-img .hcar-prev { left: 10px; } .hero-card .prop-img .hcar-next { right: 10px; }
+.hcar-dots { display: flex; justify-content: center; gap: 6px; margin-top: 0.9rem; }
+.hcar-dots button { width: 7px; height: 7px; border-radius: 50%; border: none; padding: 0; background: rgba(255,255,255,0.25); cursor: pointer; transition: background .25s, width .25s; }
+.hcar-dots button.active { background: var(--rojo); width: 18px; border-radius: 4px; }
