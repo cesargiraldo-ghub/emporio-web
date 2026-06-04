@@ -120,8 +120,8 @@
     var grid = document.getElementById("catGrid");
     var count = document.getElementById("catCount");
     var pager = document.getElementById("catPager");
-    var fOp = document.getElementById("cfOp"), fCity = document.getElementById("cfCity"),
-        fType = document.getElementById("cfType"), fQ = document.getElementById("cfQ");
+    var fOp = document.getElementById("cfOp"), fType = document.getElementById("cfType"),
+        fQ = document.getElementById("cfQ");
     var pre = qp();
     var state = { page: 1 };
 
@@ -134,13 +134,12 @@
         sel.innerHTML = '<option value="">' + label + '</option>' + vals.map(function (v) { return '<option>' + esc(v) + '</option>'; }).join("");
       }
       fill(fOp, d.filters.negocios, "Cualquier operación");
-      fill(fCity, d.filters.ciudades, "Todas las ciudades");
       fill(fType, d.filters.tipos, "Todos los tipos");
       // presets desde URL
       if (pre.op) fOp.value = pre.op;
-      if (pre.ciudad) fCity.value = pre.ciudad;
       if (pre.tipo) fType.value = pre.tipo;
       if (pre.q) fQ.value = pre.q;
+      else if (pre.ciudad) fQ.value = pre.ciudad;
 
       function matchOp(neg, op) {
         if (!op) return true;
@@ -150,13 +149,12 @@
         return n.indexOf(o) !== -1;
       }
       function apply() {
-        var op = fOp.value, ci = fCity.value, ty = fType.value, q = (fQ.value || "").toLowerCase().trim();
+        var op = fOp.value, ty = fType.value, q = (fQ.value || "").toLowerCase().trim();
         return d.properties.filter(function (p) {
           if (!matchOp(p.negocio, op)) return false;
-          if (ci && p.ciudad !== ci) return false;
           if (ty && p.tipo !== ty) return false;
           if (q) {
-            var hay = (p.titulo + " " + p.ciudad + " " + p.barrio + " " + p.zona + " " + p.descripcion).toLowerCase();
+            var hay = (p.titulo + " " + p.ciudad + " " + p.barrio + " " + p.zona + " " + p.direccion + " " + p.descripcion).toLowerCase();
             if (!hay.includes(q)) return false;
           }
           return true;
@@ -180,7 +178,7 @@
         document.querySelectorAll(".reveal").forEach(function (e) { e.classList.add("in"); });
         lazyImages(grid);
       }
-      [fOp, fCity, fType].forEach(function (s) { s.addEventListener("change", function () { state.page = 1; render(); }); });
+      [fOp, fType].forEach(function (s) { s.addEventListener("change", function () { state.page = 1; render(); }); });
       fQ.addEventListener("input", function () { state.page = 1; render(); });
       pager.addEventListener("click", function (e) {
         var b = e.target.closest("button[data-p]"); if (!b) return;
@@ -230,7 +228,11 @@
         '<nav style="font-size:.85rem;color:var(--gris);margin-bottom:1.2rem"><a href="index.html" style="color:var(--gris)">Inicio</a> / <a href="inmuebles.html" style="color:var(--gris)">Inmuebles</a> / <span style="color:#fff">' + esc(p.titulo) + '</span></nav>' +
         '<div class="detail-wrap">' +
           '<div>' +
-            '<div class="gallery-main">' + (mainImg ? '<img id="galMain" src="' + esc(mainImg) + '" alt="' + esc(p.titulo) + '">' : '<div class="noimg" style="display:grid;place-items:center;height:100%;color:var(--gris)">Sin fotos disponibles</div>') + '</div>' +
+            (imgs.length
+              ? '<div class="carousel-main"><img id="galMain" src="' + esc(imgs[0]) + '" alt="' + esc(p.titulo) + '">' +
+                  (imgs.length > 1 ? '<button class="cnav prev" id="galPrev" aria-label="Anterior">‹</button><button class="cnav next" id="galNext" aria-label="Siguiente">›</button><span class="ccount" id="galCount">1 / ' + imgs.length + '</span>' : '') +
+                '</div>'
+              : '<div class="gallery-main"><div class="noimg" style="display:grid;place-items:center;height:100%;color:var(--gris)">Sin fotos disponibles</div></div>') +
             (imgs.length > 1 ? '<div class="gallery-thumbs" id="galThumbs">' + thumbs + '</div>' : '') +
             '<div style="margin-top:1.8rem">' +
               '<span class="eyebrow">' + esc([p.negocio, p.tipo].filter(Boolean).join(" · ")) + '</span>' +
@@ -262,13 +264,24 @@
           '</div>' +
         '</div>';
 
-      // galería
+      // carrusel
+      var cur = 0;
+      var galMain = document.getElementById("galMain");
       var thumbsEl = document.getElementById("galThumbs");
+      var galCount = document.getElementById("galCount");
+      function show(i) {
+        if (!imgs.length) return;
+        cur = (i + imgs.length) % imgs.length;
+        if (galMain) galMain.src = imgs[cur];
+        if (galCount) galCount.textContent = (cur + 1) + " / " + imgs.length;
+        if (thumbsEl) thumbsEl.querySelectorAll("img").forEach(function (x, k) { x.classList.toggle("active", k === cur); });
+      }
+      var prev = document.getElementById("galPrev"), next = document.getElementById("galNext");
+      if (prev) prev.addEventListener("click", function () { show(cur - 1); });
+      if (next) next.addEventListener("click", function () { show(cur + 1); });
       if (thumbsEl) thumbsEl.addEventListener("click", function (e) {
         var t = e.target.closest("img[data-i]"); if (!t) return;
-        document.getElementById("galMain").src = imgs[parseInt(t.getAttribute("data-i"), 10)];
-        thumbsEl.querySelectorAll("img").forEach(function (x) { x.classList.remove("active"); });
-        t.classList.add("active");
+        show(parseInt(t.getAttribute("data-i"), 10));
       });
 
       // formulario lead -> /api/lead
