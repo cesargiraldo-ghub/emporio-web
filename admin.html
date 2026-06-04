@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="es-CO">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Panel del Director | Emporio Bienes y Capitales</title>
+<meta name="description" content="Acceso privado para la dirección de Emporio Bienes y Capitales. Panel de métricas del sitio web: visitas, búsquedas, pagos de arriendo, leads y crecimiento.">
+<meta name="robots" content="noindex, nofollow">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,700;1,500;1,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/styles.css">
+</head>
+<body>
+<div class="bg-mesh"></div><div class="bg-blob b1"></div><div class="bg-blob b2"></div><div class="bg-grain"></div>
+
+<!-- ============ LOGIN ============ -->
+<section class="login-screen" id="loginScreen">
+  <div class="login-card glass">
+    <div class="nav-logo"><img src="https://assets.cdn.filesafe.space/EZpRWb9LpJxi5ifCPHF8/media/687c1a56e36c15e57f198a6a.png" alt="Emporio"><span class="word">Emporio</span></div>
+    <h1>Panel del <span class="em">Director</span></h1>
+    <p class="sub">Acceso privado · métricas del sitio web</p>
+    <form id="loginForm" autocomplete="off">
+      <div class="input-group full"><label>Correo corporativo</label><input type="email" id="loginEmail" placeholder="director@emporiobienes.com" required></div>
+      <div class="input-group full"><label>Contraseña</label><input type="password" id="loginPass" placeholder="••••••••" required></div>
+      <button type="submit" class="btn btn-rojo">Ingresar al panel</button>
+    </form>
+    <p class="sub" style="margin-top:1.2rem;opacity:.7;font-size:.8rem">Demo: ingrese cualquier correo y contraseña para ver el panel.</p>
+    <p style="text-align:center;margin-top:.6rem"><a href="index.html" style="color:var(--gris);font-size:.85rem">← Volver al sitio</a></p>
+  </div>
+</section>
+
+<!-- ============ DASHBOARD ============ -->
+<div class="dash" id="dash">
+  <div class="container">
+    <div class="dash-top">
+      <div class="nav-logo"><img src="https://assets.cdn.filesafe.space/EZpRWb9LpJxi5ifCPHF8/media/687c1a56e36c15e57f198a6a.png" alt="Emporio"><span class="word">Emporio · Panel</span></div>
+      <div class="right">
+        <div class="range-pills" id="rangePills">
+          <button data-r="7">7 días</button>
+          <button data-r="30" class="active">30 días</button>
+          <button data-r="90">90 días</button>
+          <button data-r="365">12 meses</button>
+        </div>
+        <button class="btn btn-ghost" id="logoutBtn">Salir</button>
+      </div>
+    </div>
+
+    <!-- KPIs -->
+    <div class="kpi-grid">
+      <div class="kpi glass">
+        <div class="top"><span class="lbl">Visitas del mes</span>
+          <span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></span>
+        </div>
+        <div class="val">18.426</div>
+        <div class="delta up">▲ 23,4% vs. mes anterior</div>
+      </div>
+      <div class="kpi glass">
+        <div class="top"><span class="lbl">Búsquedas de propiedades</span>
+          <span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg></span>
+        </div>
+        <div class="val">5.812</div>
+        <div class="delta up">▲ 31,8% vs. mes anterior</div>
+      </div>
+      <div class="kpi glass">
+        <div class="top"><span class="lbl">Pagos de arriendo</span>
+          <span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg></span>
+        </div>
+        <div class="val">1.243</div>
+        <div class="delta up">▲ 12,1% vs. mes anterior</div>
+      </div>
+      <div class="kpi glass">
+        <div class="top"><span class="lbl">Leads captados</span>
+          <span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 00-3-3.87"/></svg></span>
+        </div>
+        <div class="val">387</div>
+        <div class="delta up">▲ 18,9% vs. mes anterior</div>
+      </div>
+    </div>
+
+    <!-- Charts fila 1 -->
+    <div class="chart-grid">
+      <div class="chart-card glass">
+        <h3>Visitas al sitio</h3>
+        <p class="sub">Tendencia de tráfico — usuarios y sesiones</p>
+        <div class="chart-box"><canvas id="chVisitas"></canvas></div>
+      </div>
+      <div class="chart-card glass">
+        <h3>Fuentes de tráfico</h3>
+        <p class="sub">De dónde llegan los visitantes</p>
+        <div class="chart-box sm"><canvas id="chFuentes"></canvas></div>
+      </div>
+    </div>
+
+    <!-- Charts fila 2 -->
+    <div class="chart-grid even">
+      <div class="chart-card glass">
+        <h3>Crecimiento mensual</h3>
+        <p class="sub">Variación % de visitas mes a mes</p>
+        <div class="chart-box sm"><canvas id="chCrecimiento"></canvas></div>
+      </div>
+      <div class="chart-card glass">
+        <h3>Eventos medidos (Meta Pixel)</h3>
+        <p class="sub">Acciones clave de los usuarios</p>
+        <div class="chart-box sm"><canvas id="chEventos"></canvas></div>
+      </div>
+    </div>
+
+    <!-- Charts fila 3 -->
+    <div class="chart-grid">
+      <div class="chart-card glass">
+        <h3>Embudo de conversión</h3>
+        <p class="sub">Del visitante al lead</p>
+        <div class="chart-box sm"><canvas id="chEmbudo"></canvas></div>
+      </div>
+      <div class="chart-card glass">
+        <h3>Dispositivos</h3>
+        <p class="sub">Cómo navegan los usuarios</p>
+        <div class="chart-box sm"><canvas id="chDisp"></canvas></div>
+      </div>
+    </div>
+
+    <!-- Tabla top propiedades -->
+    <div class="table-card glass">
+      <h3 style="font-family:var(--ff-body);font-weight:600;margin-bottom:1rem">Propiedades más vistas</h3>
+      <table class="dtable">
+        <thead><tr><th>Inmueble</th><th>Ciudad</th><th>Operación</th><th>Vistas</th><th>Leads</th><th>Estado</th></tr></thead>
+        <tbody>
+          <tr><td>Apartamento Granada 302</td><td>Cali</td><td>Arriendo</td><td>1.284</td><td>42</td><td><span class="pill green">Disponible</span></td></tr>
+          <tr><td>Casa El Poblado</td><td>Medellín</td><td>Venta</td><td>1.102</td><td>38</td><td><span class="pill amber">En negociación</span></td></tr>
+          <tr><td>Oficina Centro Empresarial</td><td>Cali</td><td>Arriendo</td><td>973</td><td>27</td><td><span class="pill green">Disponible</span></td></tr>
+          <tr><td>Apartaestudio Laureles</td><td>Medellín</td><td>Arriendo</td><td>861</td><td>31</td><td><span class="pill red">Arrendado</span></td></tr>
+          <tr><td>Local comercial Av. 6N</td><td>Cali</td><td>Venta</td><td>740</td><td>19</td><td><span class="pill green">Disponible</span></td></tr>
+        </tbody>
+      </table>
+      <p class="sub" style="margin-top:1rem;font-size:.78rem;opacity:.7">Datos de demostración. En producción se conectan a Google Analytics 4, al Píxel de Meta y a CRM RED.</p>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="assets/app.js"></script>
+<script>
+(function () {
+  var login = document.getElementById('loginScreen');
+  var dash = document.getElementById('dash');
+  var form = document.getElementById('loginForm');
+  var charts = [];
+
+  form.addEventListener('submit', function (e) {
+    e.preventDefault();
+    // DEMO: autenticación solo de front-end. En producción validar contra backend seguro.
+    window.EMP && window.EMP.track('AccesoPanelDirector', { email: document.getElementById('loginEmail').value });
+    login.style.display = 'none';
+    dash.classList.add('active');
+    if (!charts.length) initCharts();
+  });
+
+  document.getElementById('logoutBtn').addEventListener('click', function () {
+    dash.classList.remove('active');
+    login.style.display = 'grid';
+    form.reset();
+  });
+
+  document.querySelectorAll('#rangePills button').forEach(function (b) {
+    b.addEventListener('click', function () {
+      document.querySelectorAll('#rangePills button').forEach(function (x) { x.classList.remove('active'); });
+      b.classList.add('active');
+    });
+  });
+
+  function initCharts() {
+    var ROJO = '#f4060a', ROJO_SOFT = '#ff5a5f', GRID = 'rgba(255,255,255,0.06)', TICK = 'rgba(255,255,255,0.55)';
+    Chart.defaults.color = TICK;
+    Chart.defaults.font.family = "'Inter', sans-serif";
+    var baseScales = {
+      x: { grid: { color: GRID }, ticks: { color: TICK } },
+      y: { grid: { color: GRID }, ticks: { color: TICK }, beginAtZero: true }
+    };
+    var meses = ['Sep','Oct','Nov','Dic','Ene','Feb','Mar','Abr','May','Jun'];
+
+    // Visitas (line)
+    var g = document.getElementById('chVisitas').getContext('2d');
+    var grad = g.createLinearGradient(0, 0, 0, 280);
+    grad.addColorStop(0, 'rgba(244,6,10,0.35)'); grad.addColorStop(1, 'rgba(244,6,10,0)');
+    charts.push(new Chart(g, { type: 'line', data: { labels: meses, datasets: [
+      { label: 'Usuarios', data: [9200,10100,10800,11600,12900,13800,14600,15900,17100,18426], borderColor: ROJO, backgroundColor: grad, fill: true, tension: .4, borderWidth: 2, pointRadius: 0 },
+      { label: 'Sesiones', data: [12100,13200,14000,15100,16800,18000,19100,20800,22400,24100], borderColor: ROJO_SOFT, backgroundColor: 'transparent', borderDash: [5,4], tension: .4, borderWidth: 2, pointRadius: 0 }
+    ] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } }, scales: baseScales } }));
+
+    // Fuentes (doughnut)
+    charts.push(new Chart(document.getElementById('chFuentes'), { type: 'doughnut', data: { labels: ['Búsqueda orgánica','Redes sociales','Directo','Anuncios Meta','Referidos'], datasets: [{ data: [42,24,16,12,6], backgroundColor: ['#f4060a','#ff5a5f','#ff8a8d','#b3050a','#7a0306'], borderColor: 'rgba(0,0,0,0)', borderWidth: 2 }] }, options: { responsive: true, maintainAspectRatio: false, cutout: '62%', plugins: { legend: { position: 'bottom', labels: { padding: 12, boxWidth: 12 } } } } }));
+
+    // Crecimiento (bar)
+    charts.push(new Chart(document.getElementById('chCrecimiento'), { type: 'bar', data: { labels: meses, datasets: [{ label: '% crecimiento', data: [8,9.8,6.9,7.4,11.2,7,5.8,8.9,7.5,7.8], backgroundColor: ROJO, borderRadius: 6, maxBarThickness: 26 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: baseScales } }));
+
+    // Eventos (bar horizontal)
+    charts.push(new Chart(document.getElementById('chEventos'), { type: 'bar', data: { labels: ['Búsqueda propiedad','Ver propiedades','Pagar arriendo','Estado de cuenta','Soporte','Ver testimonio'], datasets: [{ label: 'Eventos', data: [5812,4120,1243,2030,860,610], backgroundColor: ['#f4060a','#ff5a5f','#ff8a8d','#ffb0b2','#b3050a','#7a0306'], borderRadius: 6, maxBarThickness: 22 }] }, options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: baseScales } }));
+
+    // Embudo (bar)
+    charts.push(new Chart(document.getElementById('chEmbudo'), { type: 'bar', data: { labels: ['Visitantes','Buscaron','Vieron ficha','Contactaron','Leads'], datasets: [{ label: 'Usuarios', data: [18426,5812,3140,920,387], backgroundColor: ['#ff8a8d','#ff5a5f','#f4060a','#b3050a','#7a0306'], borderRadius: 6, maxBarThickness: 40 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: baseScales } }));
+
+    // Dispositivos (doughnut)
+    charts.push(new Chart(document.getElementById('chDisp'), { type: 'doughnut', data: { labels: ['Móvil','Escritorio','Tablet'], datasets: [{ data: [68,27,5], backgroundColor: ['#f4060a','#ff5a5f','#ff8a8d'], borderColor: 'rgba(0,0,0,0)', borderWidth: 2 }] }, options: { responsive: true, maintainAspectRatio: false, cutout: '62%', plugins: { legend: { position: 'bottom', labels: { padding: 12, boxWidth: 12 } } } } }));
+  }
+})();
+</script>
+</body>
+</html>
