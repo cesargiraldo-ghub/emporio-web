@@ -78,8 +78,11 @@ document.addEventListener('DOMContentLoaded', function () {
       var ciudad = (document.getElementById('fCiudad') || {}).value || '';
       var tipo = (document.getElementById('fTipo') || {}).value || '';
       window.EMP.track('BusquedaPropiedad', { operacion: op, ciudad: ciudad, tipo: tipo });
-      // En producción: redirigir al catálogo con filtros
-      window.open('https://www.emporiobienesycapitalessas.inmob.site/inmuebles/catalogo/', '_blank');
+      var params = new URLSearchParams();
+      if (op) params.set('op', op);
+      if (ciudad) params.set('ciudad', ciudad);
+      if (tipo) params.set('tipo', tipo);
+      window.location.href = 'inmuebles.html' + (params.toString() ? '?' + params.toString() : '');
     });
   }
 
@@ -88,15 +91,25 @@ document.addEventListener('DOMContentLoaded', function () {
   if (form) {
     form.addEventListener('submit', function (e) {
       e.preventDefault();
-      var data = {
-        nombre: form.nombre.value, email: form.email.value,
-        telefono: form.telefono.value, interes: form.interes.value
+      var btn = form.querySelector('[type="submit"]');
+      if (btn) { btn.disabled = true; btn.dataset.t = btn.textContent; btn.textContent = 'Enviando...'; }
+      var body = {
+        nombre: form.nombre.value,
+        email: form.email.value,
+        telefono: form.telefono.value,
+        whatsapp: form.telefono.value,
+        interes: form.interes ? form.interes.value : '',
+        mensaje: form.mensaje ? form.mensaje.value : '',
       };
-      window.EMP.lead({ interes: data.interes, ciudad: form.ciudad ? form.ciudad.value : '' });
-      var ok = document.getElementById('formOk');
-      if (ok) { form.style.display = 'none'; ok.style.display = 'block'; }
-      // En producción: POST a CRM RED /clients endpoint
-      console.log('Lead capturado (demo):', data);
+      window.EMP.lead({ interes: body.interes, ciudad: form.ciudad ? form.ciudad.value : '' });
+      fetch('/api/lead', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+        .then(function (r) { return r.json(); })
+        .then(function (res) {
+          var ok = document.getElementById('formOk');
+          if (res.ok && ok) { form.style.display = 'none'; ok.style.display = 'block'; }
+          else if (btn) { btn.disabled = false; btn.textContent = btn.dataset.t || 'Enviar'; alert('No se pudo enviar: ' + (res.error || 'intenta de nuevo')); }
+        })
+        .catch(function () { if (btn) { btn.disabled = false; btn.textContent = btn.dataset.t || 'Enviar'; } alert('Error de conexión. Intenta de nuevo.'); });
     });
   }
 

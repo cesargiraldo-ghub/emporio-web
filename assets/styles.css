@@ -407,3 +407,70 @@ footer.site-footer { padding: 4rem 0 2rem; border-top: 1px solid var(--glass-bor
   .hero-badges { gap: 1.1rem; }
   .nav-logo .word { display: none; }
 }
+
+/* ============================================================
+   CATÁLOGO DE INMUEBLES (CRM RED)
+   ============================================================ */
+.cat-toolbar { display: grid; grid-template-columns: 1.4fr 1fr 1fr 1fr auto; gap: 0.6rem; padding: 0.7rem; margin-bottom: 2rem; align-items: end; }
+.cat-toolbar .field { display: flex; flex-direction: column; padding: 0.4rem 0.8rem; }
+.cat-toolbar label { font-size: 0.66rem; text-transform: uppercase; letter-spacing: 0.12em; color: var(--gris); margin-bottom: 0.2rem; }
+.cat-toolbar input, .cat-toolbar select { background: transparent; border: none; color: #fff; font-family: var(--ff-body); font-size: 0.95rem; outline: none; }
+.cat-toolbar select option { background: #15151a; }
+.cat-count { color: var(--gris); font-size: 0.9rem; margin-bottom: 1.2rem; }
+
+.pgrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.4rem; }
+.pcard { padding: 0; overflow: hidden; display: flex; flex-direction: column; transition: transform .35s var(--ease), border-color .35s var(--ease); text-decoration: none; color: inherit; }
+.pcard:hover { transform: translateY(-6px); border-color: rgba(244,6,10,0.5); }
+.pcard .ph { position: relative; aspect-ratio: 4/3; background: linear-gradient(135deg,#23232a,#14141a); overflow: hidden; }
+.pcard .ph img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform .5s var(--ease); }
+.pcard:hover .ph img { transform: scale(1.06); }
+.pcard .pbadge { position: absolute; top: 12px; left: 12px; background: var(--rojo); color: #fff; font-size: 0.7rem; font-weight: 600; padding: 0.3rem 0.7rem; border-radius: 100px; letter-spacing: 0.04em; }
+.pcard .pbadge.alt { left: auto; right: 12px; background: rgba(0,0,0,0.6); backdrop-filter: blur(6px); }
+.pcard .ph .noimg { position:absolute; inset:0; display:grid; place-items:center; color:var(--gris); font-size:0.8rem; }
+.pcard .pbody { padding: 1.2rem 1.3rem 1.4rem; display: flex; flex-direction: column; gap: 0.5rem; flex: 1; }
+.pcard .pprice { font-family: var(--ff-display); font-size: 1.35rem; color: #fff; }
+.pcard .pprice small { font-size: 0.72rem; color: var(--gris); font-family: var(--ff-body); }
+.pcard .ptitle { font-weight: 600; font-size: 1rem; line-height: 1.3; }
+.pcard .pcity { font-size: 0.85rem; color: var(--gris); display: flex; align-items: center; gap: 0.35rem; }
+.pcard .pmeta { display: flex; gap: 1rem; font-size: 0.82rem; color: var(--gris-soft); margin-top: auto; padding-top: 0.7rem; border-top: 1px solid var(--glass-border-soft); }
+.pcard .pmeta span { display: inline-flex; align-items: center; gap: 0.3rem; }
+.pcard .pmeta svg { width: 15px; height: 15px; opacity: .8; }
+
+.pager { display: flex; justify-content: center; gap: 0.4rem; margin-top: 2.5rem; flex-wrap: wrap; }
+.pager button { background: var(--glass-bg); border: 1px solid var(--glass-border); color: var(--gris); font-family: var(--ff-body); padding: 0.5rem 0.9rem; border-radius: 10px; cursor: pointer; transition: all .25s; }
+.pager button.active { background: var(--rojo); color: #fff; border-color: var(--rojo); }
+.pager button:disabled { opacity: .4; cursor: not-allowed; }
+
+.empty { text-align: center; padding: 4rem 1rem; color: var(--gris); }
+.skeleton { background: linear-gradient(90deg, rgba(255,255,255,0.04), rgba(255,255,255,0.09), rgba(255,255,255,0.04)); background-size: 200% 100%; animation: shimmer 1.3s infinite; border-radius: var(--radius); aspect-ratio: 4/3; }
+@keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
+
+/* ---- Ficha comercial (detalle) ---- */
+.detail-wrap { display: grid; grid-template-columns: 1.7fr 1fr; gap: 2rem; align-items: start; }
+.gallery-main { width: 100%; aspect-ratio: 16/10; border-radius: var(--radius); overflow: hidden; background: linear-gradient(135deg,#23232a,#14141a); }
+.gallery-main img { width: 100%; height: 100%; object-fit: cover; }
+.gallery-thumbs { display: grid; grid-template-columns: repeat(5,1fr); gap: 0.6rem; margin-top: 0.7rem; }
+.gallery-thumbs img { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 10px; cursor: pointer; opacity: .6; transition: opacity .25s, outline .2s; outline: 2px solid transparent; }
+.gallery-thumbs img.active, .gallery-thumbs img:hover { opacity: 1; outline-color: var(--rojo); }
+.spec-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 0.8rem; margin: 1.6rem 0; }
+.spec { padding: 1rem; text-align: center; }
+.spec .v { font-family: var(--ff-display); font-size: 1.4rem; color: #fff; }
+.spec .l { font-size: 0.74rem; color: var(--gris); text-transform: uppercase; letter-spacing: .06em; margin-top: .2rem; }
+.detail-price { font-family: var(--ff-display); font-size: 2.2rem; color: #fff; }
+.detail-price small { font-size: .9rem; color: var(--gris); font-family: var(--ff-body); }
+.advisor { padding: 1.5rem; position: sticky; top: 100px; }
+.advisor .who { display: flex; align-items: center; gap: 0.9rem; margin-bottom: 1rem; }
+.advisor .avatar { width: 56px; height: 56px; border-radius: 50%; background: linear-gradient(135deg,var(--rojo),var(--rojo-deep)); display: grid; place-items: center; color: #fff; font-family: var(--ff-display); font-size: 1.4rem; overflow: hidden; }
+.advisor .avatar img { width: 100%; height: 100%; object-fit: cover; }
+.advisor .who .nm { font-weight: 600; }
+.advisor .who .rl { font-size: .8rem; color: var(--gris); }
+@media (max-width: 900px) {
+  .pgrid, .cat-toolbar { grid-template-columns: 1fr 1fr; }
+  .detail-wrap { grid-template-columns: 1fr; }
+  .advisor { position: static; }
+  .spec-grid { grid-template-columns: repeat(2,1fr); }
+}
+@media (max-width: 560px) {
+  .pgrid, .cat-toolbar, .gallery-thumbs { grid-template-columns: 1fr; }
+  .gallery-thumbs { grid-template-columns: repeat(4,1fr); }
+}
