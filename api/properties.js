@@ -49,6 +49,13 @@ function matchOp(neg, op) {
   if (/venta/.test(o)) return /venta/.test(n);
   return n.indexOf(o) !== -1;
 }
+// precio relevante según la operación buscada
+function priceOf(p, op) {
+  var o = (op || "").toLowerCase();
+  if (/venta/.test(o)) return p.precioVenta || 0;
+  if (/arriendo|alquiler/.test(o)) return p.precioArriendo || 0;
+  return (p.precioArriendo > 0 ? p.precioArriendo : (p.precioVenta || 0));
+}
 function applyFilters(list, f) {
   var id = (f.id || "").trim();
   if (id) {
@@ -58,10 +65,17 @@ function applyFilters(list, f) {
     });
   }
   var q = (f.q || "").toLowerCase().trim();
+  var min = Number(f.min) || 0, max = Number(f.max) || 0;
   return list.filter(function (p) {
     if (!matchOp(p.negocio, f.op)) return false;
     if (f.tipo && p.tipo !== f.tipo) return false;
     if (f.ciudad && String(p.ciudad || "").toLowerCase() !== String(f.ciudad).toLowerCase()) return false;
+    if (min || max) {
+      var price = priceOf(p, f.op);
+      if (!(price > 0)) return false;
+      if (min && price < min) return false;
+      if (max && price > max) return false;
+    }
     if (q) {
       var hay = (p.titulo + " " + p.ciudad + " " + p.barrio + " " + p.zona + " " + p.direccion + " " + p.descripcion).toLowerCase();
       if (hay.indexOf(q) === -1) return false;
@@ -153,6 +167,8 @@ function normalizeProperty(p, agentsById, typeMap, bizMap) {
   var ciudadObj = objName(p.ciudad_id) || objName(p.ciudad) || ciudadName;
   var barrioObj = objName(p.barrio_id) || objName(p.barrio) || barrioName;
   var zonaObj = objName(p.zona_id) || objName(p.zona) || "";
+  var deptoObj = objName(p.estado_id) || objName(p.departamento) || objName(p.estado) || "";
+  var paisObj = objName(p.pais_id) || objName(p.pais) || objName(p.country) || "Colombia";
 
   // estrato puede venir como objeto {id, name:"estrato 2"} o como número
   var estratoVal = null;
@@ -201,6 +217,8 @@ function normalizeProperty(p, agentsById, typeMap, bizMap) {
     ciudad: ciudadObj,
     zona: zonaObj,
     barrio: barrioObj,
+    departamento: deptoObj,
+    pais: paisObj,
     direccion: p.direccion || "",
     precioVenta: num(p.selling_price),
     precioArriendo: num(p.rental_price),
@@ -321,7 +339,7 @@ module.exports = async (req, res) => {
       if (!(CACHE.data && now - CACHE.at < TTL)) { CACHE = { at: now, data: await buildPayload() }; }
       const d = CACHE.data;
       const perPage = Math.min(Math.max(parseInt(q.per_page, 10) || 10, 1), 48);
-      const filtered = applyFilters(d.properties, { id: q.id || "", op: q.op || "", tipo: q.tipo || "", q: q.q || "", ciudad: q.ciudad || "" });
+      const filtered = applyFilters(d.properties, { id: q.id || "", op: q.op || "", tipo: q.tipo || "", q: q.q || "", ciudad: q.ciudad || "", min: q.min || "", max: q.max || "" });
       const total = filtered.length;
       const lastPage = Math.max(1, Math.ceil(total / perPage));
       let page = parseInt(q.page, 10) || 1;

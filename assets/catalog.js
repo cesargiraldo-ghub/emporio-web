@@ -121,11 +121,14 @@
     var count = document.getElementById("catCount");
     var pager = document.getElementById("catPager");
     var fOp = document.getElementById("cfOp"), fType = document.getElementById("cfType"),
-        fQ = document.getElementById("cfQ"), fId = document.getElementById("cfId");
+        fQ = document.getElementById("cfQ"), fId = document.getElementById("cfId"),
+        fMin = document.getElementById("cfMin"), fMax = document.getElementById("cfMax");
     var pre = qp();
     var PER = 12;
     var selectsReady = false, tdeb = null;
-    var filters = { id: pre.id || "", op: pre.op || "", tipo: pre.tipo || "", q: pre.q || pre.ciudad || "" };
+    var filters = { id: pre.id || "", op: pre.op || "", tipo: pre.tipo || "", q: pre.q || pre.ciudad || "", min: "", max: "" };
+    function digits(s) { return String(s || "").replace(/[^\d]/g, ""); }
+    function fmt(s) { var d = digits(s); return d ? Number(d).toLocaleString("es-CO") : ""; }
 
     function skeleton() {
       grid.innerHTML = '<div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div>';
@@ -152,6 +155,8 @@
         (filters.id ? "&id=" + encodeURIComponent(filters.id) : "") +
         (filters.op ? "&op=" + encodeURIComponent(filters.op) : "") +
         (filters.tipo ? "&tipo=" + encodeURIComponent(filters.tipo) : "") +
+        (filters.min ? "&min=" + encodeURIComponent(filters.min) : "") +
+        (filters.max ? "&max=" + encodeURIComponent(filters.max) : "") +
         (filters.q ? "&q=" + encodeURIComponent(filters.q) : "");
       fetch(url).then(function (r) { return r.json(); }).then(function (d) {
         if (!d.ok) { grid.innerHTML = '<p class="empty">' + esc(d.error || "Error al cargar inmuebles.") + '</p>'; count.textContent = ""; pager.innerHTML = ""; return; }
@@ -172,6 +177,15 @@
     [fOp, fType].forEach(function (s) { s.addEventListener("change", function () { filters.op = fOp.value; filters.tipo = fType.value; fetchPage(1); }); });
     fQ.addEventListener("input", function () { clearTimeout(tdeb); tdeb = setTimeout(function () { filters.q = fQ.value; fetchPage(1); }, 350); });
     fId.addEventListener("input", function () { clearTimeout(tdeb); tdeb = setTimeout(function () { filters.id = fId.value.trim(); fetchPage(1); }, 350); });
+    [fMin, fMax].forEach(function (inp) {
+      inp.addEventListener("input", function () {
+        var pos = inp.value.length - inp.selectionStart;
+        inp.value = fmt(inp.value);
+        try { inp.selectionStart = inp.selectionEnd = Math.max(0, inp.value.length - pos); } catch (e) {}
+        clearTimeout(tdeb);
+        tdeb = setTimeout(function () { filters.min = digits(fMin.value); filters.max = digits(fMax.value); fetchPage(1); }, 400);
+      });
+    });
     pager.addEventListener("click", function (e) {
       var b = e.target.closest("button[data-p]"); if (!b || b.disabled) return;
       fetchPage(parseInt(b.getAttribute("data-p"), 10));
@@ -212,9 +226,11 @@
         p.estrato ? { v: p.estrato, l: "Estrato" } : null,
       ].filter(Boolean);
 
-      var mapQ = (p.lat && p.lng) ? (p.lat + "," + p.lng) : (p.direccion || "");
+      var locParts = [p.barrio, p.zona, p.ciudad, p.departamento, p.pais].filter(Boolean);
+      var locText = locParts.filter(function (v, i) { return locParts.indexOf(v) === i; }).join(", ");
+      var mapQ = locText || p.ciudad || "Colombia";
       var mapEmbed = mapQ
-        ? '<h3 style="margin:1.8rem 0 .7rem">Ubicación</h3><iframe loading="lazy" style="width:100%;height:300px;border:0;border-radius:var(--radius)" src="https://www.google.com/maps?q=' + encodeURIComponent(mapQ) + '&z=15&output=embed"></iframe>'
+        ? '<h3 style="margin:1.8rem 0 .7rem">Ubicación</h3><iframe loading="lazy" style="width:100%;height:300px;border:0;border-radius:var(--radius)" src="https://www.google.com/maps?q=' + encodeURIComponent(mapQ) + '&z=14&output=embed"></iframe>'
         : "";
       var featuresHTML = (p.caracteristicas && p.caracteristicas.length)
         ? '<h3 style="margin:1.6rem 0 .6rem">Características</h3><div class="feat-list">' +
@@ -233,7 +249,7 @@
             '<div style="margin-top:1.8rem">' +
               '<span class="eyebrow">' + esc([p.negocio, p.tipo].filter(Boolean).join(" · ")) + '</span>' +
               '<h1 style="font-size:clamp(1.8rem,4vw,2.6rem);margin:.4rem 0">' + esc(p.titulo) + '</h1>' +
-              '<div class="pcity" style="color:var(--gris)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg> ' + esc(p.direccion || [p.barrio, p.ciudad].filter(Boolean).join(", ") || "Colombia") + '</div>' +
+              '<div class="pcity" style="color:var(--gris)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg> ' + esc(locText || "Colombia") + '</div>' +
               '<div class="detail-price" style="margin-top:1rem">' + priceHTML(p) + '</div>' +
               (specs.length ? '<div class="spec-grid">' + specs.map(function (s) { return '<div class="spec glass"><div class="v">' + esc(s.v) + '</div><div class="l">' + esc(s.l) + '</div></div>'; }).join("") + '</div>' : '') +
               (p.descripcion ? '<h3 style="margin:1.6rem 0 .6rem">Descripción</h3><p style="color:var(--gris-soft);white-space:pre-line">' + esc(p.descripcion) + '</p>' : '') +
