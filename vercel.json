@@ -2,7 +2,8 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "trailingSlash": false,
   "redirects": [
-    { "source": "/soporte", "destination": "https://portal.emporiobienes.com/", "permanent": true }
+    { "source": "/soporte", "destination": "https://portal.emporiobienes.com/", "permanent": true },
+    { "source": "/widget/form/74emRWNJxKCzCirQmVo6", "destination": "https://portal.emporiobienes.com/", "permanent": true }
   ],
   "headers": [
     {
