@@ -1,6 +1,9 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "trailingSlash": false,
+  "redirects": [
+    { "source": "/soporte", "destination": "https://portal.emporiobienes.com/", "permanent": true }
+  ],
   "headers": [
     {
       "source": "/assets/(.*)",
