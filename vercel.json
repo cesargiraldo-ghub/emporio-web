@@ -5,6 +5,9 @@
     { "source": "/soporte", "destination": "https://portal.emporiobienes.com/", "permanent": true },
     { "source": "/widget/form/74emRWNJxKCzCirQmVo6", "destination": "https://portal.emporiobienes.com/", "permanent": true }
   ],
+  "rewrites": [
+    { "source": "/tarifas", "destination": "/tarifas.html" }
+  ],
   "headers": [
     {
       "source": "/assets/(.*)",
